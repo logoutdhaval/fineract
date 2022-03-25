@@ -23,7 +23,7 @@ import static org.apache.fineract.portfolio.savings.SavingsApiConstants.activate
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.bankNumberParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.checkNumberParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.closedOnDateParamName;
-import static org.apache.fineract.portfolio.savings.SavingsApiConstants.lienParamName;
+import static org.apache.fineract.portfolio.savings.SavingsApiConstants.lienAllowedParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.paymentTypeIdParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.receiptNumberParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.routingCodeParamName;
@@ -69,7 +69,7 @@ public class SavingsAccountTransactionDataValidator {
     private final FromJsonHelper fromApiJsonHelper;
     private static final Set<String> SAVINGS_ACCOUNT_HOLD_AMOUNT_REQUEST_DATA_PARAMETERS = new HashSet<>(
             Arrays.asList(transactionDateParamName, SavingsApiConstants.dateFormatParamName, SavingsApiConstants.localeParamName,
-                    transactionAmountParamName, lienParamName));
+                    transactionAmountParamName, lienAllowedParamName));
     private final ConfigurationDomainService configurationDomainService;
 
     @Autowired
@@ -232,25 +232,68 @@ public class SavingsAccountTransactionDataValidator {
             baseDataValidator.reset().parameter(SavingsApiConstants.statusParamName)
                     .failWithCodeNoParameterAddedToErrorCode(SavingsApiConstants.ERROR_MSG_SAVINGS_ACCOUNT_NOT_ACTIVE);
         }
-        account.holdAmount(amount);
 
-        if (account.getEnforceMinRequiredBalance()) {
-            if (account.getWithdrawableBalance().compareTo(BigDecimal.ZERO) < 0) {
-                baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient balance", account.getId());
+        Boolean isEnforceMinRequiredBalanceEnabled = account.getEnforceMinRequiredBalance();
+        Boolean isAccountLienEnabled = account.isLienAllowed();
+        Boolean isOverdraftEnabled = account.isAllowOverdraft();
+
+        Boolean lienAllowed = false;
+        if (this.fromApiJsonHelper.parameterExists(lienAllowedParamName, element)) {
+            lienAllowed = this.fromApiJsonHelper.extractBooleanNamed(lienAllowedParamName, element);
+            if (lienAllowed) {
+                if (isAccountLienEnabled) {
+                    if (isOverdraftEnabled) {
+                        if (account.getOverdraftLimit().compareTo(BigDecimal.ZERO) > 0
+                                && account.getMaxAllowedLienLimit().compareTo(BigDecimal.ZERO) > 0) {
+                            if (account.getOverdraftLimit().compareTo(account.getMaxAllowedLienLimit()) > 0) {
+                                baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode(
+                                        "Overdraft.limit.can.not.be.greater.than.lien.limit", account.getId());
+                            }
+                        }
+                    }
+
+                    if (amount.compareTo(account.getMaxAllowedLienLimit()) > 0) {
+                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("lien.limit.exceeded", account.getId());
+                    }
+                } else {
+                    baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("lien.is.not.allowed.in.product.level",
+                            account.getId());
+                }
+            } else {
+                if (isOverdraftEnabled) {
+                    if (amount.compareTo(account.getWithdrawableBalance()) > 0 && amount.compareTo(account.getOverdraftLimit()) > 0) {
+                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
+                    }
+                }
+                if (isEnforceMinRequiredBalanceEnabled) {
+                    if (amount.compareTo(account.getWithdrawableBalance()) > 0) {
+                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
+                    }
+                }
+                if (!isOverdraftEnabled && !isEnforceMinRequiredBalanceEnabled) {
+                    if (amount.compareTo(account.getWithdrawableBalance()) > 0) {
+                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
+                    }
+                }
             }
-        }
-
-        Boolean lien = false;
-
-        if (this.fromApiJsonHelper.parameterExists(lienParamName, element)) {
-            lien = this.fromApiJsonHelper.extractBooleanNamed(lienParamName, element);
-            if (!lien) {
-                if (account.getWithdrawableBalanceWithoutMinimumBalance().compareTo(BigDecimal.ZERO) < 0) {
-                    baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient balance", account.getId());
+        } else {
+            if (isOverdraftEnabled) {
+                if (amount.compareTo(account.getWithdrawableBalance()) > 0 && amount.compareTo(account.getOverdraftLimit()) > 0) {
+                    baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
+                }
+            }
+            if (isEnforceMinRequiredBalanceEnabled) {
+                if (amount.compareTo(account.getWithdrawableBalance()) > 0) {
+                    baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
+                }
+            }
+            if (!isOverdraftEnabled && !isEnforceMinRequiredBalanceEnabled) {
+                if (amount.compareTo(account.getWithdrawableBalance()) > 0) {
+                    baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
                 }
             }
         }
-
+        account.holdAmount(amount);
         LocalDate lastTransactionDate = null;
 
         if (!backdatedTxnsAllowedTill) {
@@ -270,7 +313,7 @@ public class SavingsAccountTransactionDataValidator {
         Date createdDate = new Date();
 
         SavingsAccountTransaction transaction = SavingsAccountTransaction.holdAmount(account, account.office(), paymentDetails,
-                transactionDate, Money.of(account.getCurrency(), amount), createdDate, createdUser);
+                transactionDate, Money.of(account.getCurrency(), amount), createdDate, createdUser, lienAllowed);
         return transaction;
     }
 

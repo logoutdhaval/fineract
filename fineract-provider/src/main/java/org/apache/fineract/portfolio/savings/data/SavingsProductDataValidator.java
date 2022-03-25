@@ -34,8 +34,10 @@ import static org.apache.fineract.portfolio.savings.SavingsApiConstants.interest
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.interestCompoundingPeriodTypeParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.interestPostingPeriodTypeParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.isDormancyTrackingActiveParamName;
+import static org.apache.fineract.portfolio.savings.SavingsApiConstants.lienAllowedParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.lockinPeriodFrequencyParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.lockinPeriodFrequencyTypeParamName;
+import static org.apache.fineract.portfolio.savings.SavingsApiConstants.maxAllowedLienLimitParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.minBalanceForInterestCalculationParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.minOverdraftForInterestCalculationParamName;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.minRequiredOpeningBalanceParamName;
@@ -103,6 +105,7 @@ public class SavingsProductDataValidator {
             daysToInactiveParamName, daysToEscheatParamName, allowOverdraftParamName, overdraftLimitParamName,
             nominalAnnualInterestRateOverdraftParamName, minOverdraftForInterestCalculationParamName,
             SavingsApiConstants.minRequiredBalanceParamName, SavingsApiConstants.enforceMinRequiredBalanceParamName,
+            SavingsApiConstants.maxAllowedLienLimitParamName, SavingsApiConstants.lienAllowedParamName,
             minBalanceForInterestCalculationParamName, withHoldTaxParamName, taxGroupIdParamName));
 
     @Autowired
@@ -339,6 +342,22 @@ public class SavingsProductDataValidator {
                     .extractBigDecimalWithLocaleNamed(minBalanceForInterestCalculationParamName, element);
             baseDataValidator.reset().parameter(minBalanceForInterestCalculationParamName).value(minBalanceForInterestCalculation)
                     .ignoreIfNull().zeroOrPositiveAmount();
+        }
+        Boolean isLienAllowed = this.fromApiJsonHelper.parameterExists(lienAllowedParamName, element);
+        Boolean isOverdraftAllowed = this.fromApiJsonHelper.parameterExists(allowOverdraftParamName, element);
+
+        if (isLienAllowed) {
+            if (isOverdraftAllowed) {
+                BigDecimal overdraftLimit = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(overdraftLimitParamName, element);
+                BigDecimal lienAllowedLimit = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(maxAllowedLienLimitParamName,
+                        element);
+                if (overdraftLimit.compareTo(BigDecimal.ZERO) > 0 && lienAllowedLimit.compareTo(BigDecimal.ZERO) > 0) {
+                    if (overdraftLimit.compareTo(lienAllowedLimit) > 0) {
+                        baseDataValidator.reset()
+                                .failWithCodeNoParameterAddedToErrorCode("Overdraft.limit.can.not.be.greater.than.lien.limit");
+                    }
+                }
+            }
         }
 
         validateTaxWithHoldingParams(baseDataValidator, element, true);
