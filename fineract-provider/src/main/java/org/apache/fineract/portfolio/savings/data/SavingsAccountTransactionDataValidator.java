@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
@@ -238,43 +239,20 @@ public class SavingsAccountTransactionDataValidator {
         Boolean isOverdraftEnabled = account.isAllowOverdraft();
 
         Boolean lienAllowed = false;
-        if (this.fromApiJsonHelper.parameterExists(lienAllowedParamName, element)) {
+        if (BooleanUtils.isTrue(fromApiJsonHelper.extractBooleanNamed(lienAllowedParamName, element))) {
             lienAllowed = this.fromApiJsonHelper.extractBooleanNamed(lienAllowedParamName, element);
-            if (lienAllowed) {
-                if (isAccountLienEnabled) {
-                    if (isOverdraftEnabled) {
-                        if (account.getOverdraftLimit().compareTo(BigDecimal.ZERO) > 0
-                                && account.getMaxAllowedLienLimit().compareTo(BigDecimal.ZERO) > 0) {
-                            if (account.getOverdraftLimit().compareTo(account.getMaxAllowedLienLimit()) > 0) {
-                                baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode(
-                                        "Overdraft.limit.can.not.be.greater.than.lien.limit", account.getId());
-                            }
-                        }
+            if (isAccountLienEnabled) {
+                if (isOverdraftEnabled) {
+                    if (account.getOverdraftLimit().compareTo(account.getMaxAllowedLienLimit()) > 0) {
+                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode(
+                                "Overdraft.limit.can.not.be.greater.than.lien.limit", account.getId());
                     }
-
-                    if (amount.compareTo(account.getMaxAllowedLienLimit()) > 0) {
-                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("lien.limit.exceeded", account.getId());
-                    }
-                } else {
-                    baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("lien.is.not.allowed.in.product.level",
-                            account.getId());
+                }
+                if (amount.compareTo(account.getMaxAllowedLienLimit()) > 0) {
+                    baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("lien.limit.exceeded", account.getId());
                 }
             } else {
-                if (isOverdraftEnabled) {
-                    if (amount.compareTo(account.getWithdrawableBalance()) > 0 && amount.compareTo(account.getOverdraftLimit()) > 0) {
-                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
-                    }
-                }
-                if (isEnforceMinRequiredBalanceEnabled) {
-                    if (amount.compareTo(account.getWithdrawableBalance()) > 0) {
-                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
-                    }
-                }
-                if (!isOverdraftEnabled && !isEnforceMinRequiredBalanceEnabled) {
-                    if (amount.compareTo(account.getWithdrawableBalance()) > 0) {
-                        baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("insufficient.balance", account.getId());
-                    }
-                }
+                baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("lien.is.not.allowed.in.product.level", account.getId());
             }
         } else {
             if (isOverdraftEnabled) {

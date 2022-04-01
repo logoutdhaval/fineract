@@ -332,7 +332,7 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
             sqlBuilder.append("sa.min_balance_for_interest_calculation as minBalanceForInterestCalculation,");
             sqlBuilder.append("sa.min_required_balance as minRequiredBalance, ");
             sqlBuilder.append("sa.enforce_min_required_balance as enforceMinRequiredBalance, ");
-            sqlBuilder.append("sa.max_Allowed_Lien_Limit as maxAllowedLienLimit, ");
+            sqlBuilder.append("sa.max_allowed_lien_limit as maxAllowedLienLimit, ");
             sqlBuilder.append("sa.is_lien_allowed as lienAllowed, ");
             sqlBuilder.append("sa.on_hold_funds_derived as onHoldFunds, ");
             sqlBuilder.append("sa.withhold_tax as withHoldTax, ");
@@ -1518,7 +1518,7 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
             // sqlBuilder.append("sp.annual_fee_on_day as annualFeeOnDay ");
             sqlBuilder.append("sp.min_required_balance as minRequiredBalance, ");
             sqlBuilder.append("sp.enforce_min_required_balance as enforceMinRequiredBalance, ");
-            sqlBuilder.append("sp.max_Allowed_Lien_Limit as maxAllowedLienLimit, ");
+            sqlBuilder.append("sp.max_allowed_lien_limit as maxAllowedLienLimit, ");
             sqlBuilder.append("sp.is_lien_allowed as lienAllowed ");
             sqlBuilder.append("from m_savings_product sp ");
             sqlBuilder.append("join m_currency curr on curr.code = sp.currency_code ");

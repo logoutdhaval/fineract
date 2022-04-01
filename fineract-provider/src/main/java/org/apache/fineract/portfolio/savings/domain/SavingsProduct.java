@@ -181,7 +181,7 @@ public class SavingsProduct extends AbstractPersistableCustom {
     @Column(name = "min_required_balance", scale = 6, precision = 19, nullable = true)
     private BigDecimal minRequiredBalance;
 
-    @Column(name = "is_lien_allowed")
+    @Column(name = "is_lien_allowed", nullable = false)
     private boolean lienAllowed;
 
     @Column(name = "max_allowed_lien_limit", scale = 6, precision = 19, nullable = true)
