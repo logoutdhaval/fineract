@@ -1315,7 +1315,7 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
 
         final List<ResultsetRowData> result = fillDatatableResultSetDataRows(sql);
 
-        return new GenericResultsetData(columnHeaders, result);
+        return new GenericResultsetData(columnHeaders, result, null, null);
     }
 
     private GenericResultsetData retrieveDataTableGenericResultSetForUpdate(final String appTable, final String dataTableName,
@@ -1337,7 +1337,7 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
 
         final List<ResultsetRowData> result = fillDatatableResultSetDataRows(sql);
 
-        return new GenericResultsetData(columnHeaders, result);
+        return new GenericResultsetData(columnHeaders, result, null, null);
     }
 
     private CommandProcessingResult checkMainResourceExistsWithinScope(final String appTable, final Long appTableId) {

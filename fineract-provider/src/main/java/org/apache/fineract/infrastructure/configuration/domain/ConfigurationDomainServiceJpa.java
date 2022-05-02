@@ -221,6 +221,16 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
     }
 
     @Override
+    public Integer pageContentLimit() {
+        final String propertyName = "page-content-limit";
+        final GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(propertyName);
+        if (property.isEnabled()) {
+            return property.getValue().intValue();
+        }
+        return 0;
+    }
+
+    @Override
     public boolean isBackdatePenaltiesEnabled() {
         final String propertyName = "backdate-penalties-enabled";
         final GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(propertyName);

@@ -18,6 +18,10 @@
  */
 package org.apache.fineract.infrastructure.report.service;
 
+import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.pageNo;
+import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.paginationAllowed;
+import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.paginationOrderBy;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +41,21 @@ public interface ReportingProcessService {
                 String pKey = "${" + k.substring(2) + "}";
                 String pValue = queryParams.get(k).get(0);
                 SQLInjectionValidator.validateSQLInput(pValue);
+                reportParams.put(pKey, pValue);
+            }
+            if (k.equalsIgnoreCase(paginationAllowed)) {
+                String pKey = k;
+                String pValue = queryParams.get(k).get(0);
+                reportParams.put(pKey, pValue);
+            }
+            if (k.equalsIgnoreCase(paginationOrderBy)) {
+                String pKey = k;
+                String pValue = queryParams.get(k).get(0);
+                reportParams.put(pKey, pValue);
+            }
+            if (k.equalsIgnoreCase(pageNo)) {
+                String pKey = k;
+                String pValue = queryParams.get(k).get(0);
                 reportParams.put(pKey, pValue);
             }
         }

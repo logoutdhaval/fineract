@@ -27,10 +27,15 @@ public final class GenericResultsetData {
 
     private final List<ResultsetColumnHeaderData> columnHeaders;
     private final List<ResultsetRowData> data;
+    private Integer totalReportSize;
+    private Integer recordsPerPage;
 
-    public GenericResultsetData(final List<ResultsetColumnHeaderData> columnHeaders, final List<ResultsetRowData> resultsetDataRows) {
+    public GenericResultsetData(final List<ResultsetColumnHeaderData> columnHeaders, final List<ResultsetRowData> resultsetDataRows,
+            final Integer totalReportSize, final Integer recordsPerPage) {
         this.columnHeaders = columnHeaders;
         this.data = resultsetDataRows;
+        this.totalReportSize = totalReportSize;
+        this.recordsPerPage = recordsPerPage;
     }
 
     public List<ResultsetColumnHeaderData> getColumnHeaders() {
@@ -39,6 +44,14 @@ public final class GenericResultsetData {
 
     public List<ResultsetRowData> getData() {
         return this.data;
+    }
+
+    public void setReportSize(Integer totalReportSize) {
+        this.totalReportSize = totalReportSize;
+    }
+
+    public void setRecordsPerPage(Integer recordsPerPage) {
+        this.recordsPerPage = recordsPerPage;
     }
 
     public String getColTypeOfColumnNamed(final String columnName) {

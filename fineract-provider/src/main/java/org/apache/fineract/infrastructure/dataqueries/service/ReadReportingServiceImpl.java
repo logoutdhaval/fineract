@@ -18,6 +18,9 @@
  */
 package org.apache.fineract.infrastructure.dataqueries.service;
 
+import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.pageNo;
+import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.paginationOrderBy;
+
 import com.lowagie.text.Document;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.pdf.PdfPTable;
@@ -37,8 +40,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.ws.rs.core.StreamingOutput;
+import liquibase.util.BooleanUtil;
+import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
+import org.apache.fineract.infrastructure.core.data.ApiParameterError;
+import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
+import org.apache.fineract.infrastructure.core.service.Page;
+import org.apache.fineract.infrastructure.core.service.PaginationHelper;
+import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.dataqueries.data.GenericResultsetData;
 import org.apache.fineract.infrastructure.dataqueries.data.ReportData;
 import org.apache.fineract.infrastructure.dataqueries.data.ReportParameterData;
@@ -69,14 +79,22 @@ public class ReadReportingServiceImpl implements ReadReportingService {
     private final PlatformSecurityContext context;
     private final GenericDataService genericDataService;
     private final SqlInjectionPreventerService sqlInjectionPreventerService;
+    private final DatabaseSpecificSQLGenerator sqlGenerator;
+    private final ConfigurationDomainService configurationDomainService;
+    private final PaginationHelper paginationHelper;
 
     @Autowired
     public ReadReportingServiceImpl(final PlatformSecurityContext context, final JdbcTemplate jdbcTemplate,
-            final GenericDataService genericDataService, SqlInjectionPreventerService sqlInjectionPreventerService) {
+            final GenericDataService genericDataService, SqlInjectionPreventerService sqlInjectionPreventerService,
+            final ConfigurationDomainService configurationDomainService, final DatabaseSpecificSQLGenerator sqlGenerator,
+            final PaginationHelper paginationHelper) {
         this.context = context;
         this.jdbcTemplate = jdbcTemplate;
         this.genericDataService = genericDataService;
         this.sqlInjectionPreventerService = sqlInjectionPreventerService;
+        this.configurationDomainService = configurationDomainService;
+        this.sqlGenerator = sqlGenerator;
+        this.paginationHelper = paginationHelper;
     }
 
     @Override
@@ -162,9 +180,25 @@ public class ReadReportingServiceImpl implements ReadReportingService {
         final long startTime = System.currentTimeMillis();
         LOG.info("STARTING REPORT: {}   Type: {}", name, type);
 
-        final String sql = getSQLtoRun(name, type, queryParams, isSelfServiceUserReport);
+        String sql = getSQLtoRun(name, type, queryParams, isSelfServiceUserReport);
+        final GenericResultsetData result;
+        Boolean paginationAllowed = BooleanUtil.parseBoolean(queryParams.get(ReportingConstants.paginationAllowed));
 
-        final GenericResultsetData result = this.genericDataService.fillGenericResultSet(sql);
+        if (paginationAllowed) {
+            final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+            final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors);
+            baseDataValidator.reset().parameter(pageNo).value(queryParams.get(pageNo)).notNull().throwValidationErrors();
+            Integer pageContent = this.configurationDomainService.pageContentLimit();
+            Page<GenericResultsetData> reportData = this.paginationHelper.fetchPage(this.jdbcTemplate, sql, null, new ReportMapper(sql));
+            Integer pageNo = Integer.parseInt(queryParams.get(ReportingConstants.pageNo));
+            pageNo = pageNo * pageContent;
+            sql = sql + " order by " + queryParams.get(paginationOrderBy) + " limit " + pageContent + " offset " + pageNo;
+            result = this.genericDataService.fillGenericResultSet(sql);
+            result.setRecordsPerPage(pageContent);
+            result.setReportSize(reportData.getTotalFilteredRecords());
+        } else {
+            result = this.genericDataService.fillGenericResultSet(sql);
+        }
 
         final long elapsed = System.currentTimeMillis() - startTime;
         LOG.info("FINISHING Report/Request Name: {} - {}     Elapsed Time: {}", name, type, elapsed);
@@ -194,7 +228,6 @@ public class ReadReportingServiceImpl implements ReadReportingService {
         sql = this.genericDataService.replace(sql, "${isSelfServiceUser}", Integer.toString(isSelfServiceUserReport ? 1 : 0));
 
         sql = this.genericDataService.wrapSQL(sql);
-
         return sql;
     }
 
@@ -214,6 +247,21 @@ public class ReadReportingServiceImpl implements ReadReportingService {
             return rs.getString("the_sql");
         }
         throw new ReportNotFoundException(encodedName);
+    }
+
+    private static final class ReportMapper implements RowMapper<GenericResultsetData> {
+
+        private final String schema;
+
+        ReportMapper(String sql) {
+
+            this.schema = sql;
+        }
+
+        @Override
+        public GenericResultsetData mapRow(ResultSet rs, int rowNum) throws SQLException {
+            return null;
+        }
     }
 
     @Override
