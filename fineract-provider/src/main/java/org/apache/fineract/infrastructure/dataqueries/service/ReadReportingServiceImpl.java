@@ -40,7 +40,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.ws.rs.core.StreamingOutput;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
@@ -64,14 +64,13 @@ import org.owasp.esapi.ESAPI;
 import org.owasp.esapi.codecs.UnixCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Service;
 
 @Service
-@AllArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor
 public class ReadReportingServiceImpl implements ReadReportingService {
 
     private static final String ORDER_BY_REGEX_PATTERN = "^[0-9]*$";
@@ -167,25 +166,39 @@ public class ReadReportingServiceImpl implements ReadReportingService {
 
         final long startTime = System.currentTimeMillis();
         LOG.info("STARTING REPORT: {}   Type: {}", name, type);
-        final StringBuilder sqlStringBuilder = new StringBuilder(200);
+        StringBuilder sqlStringBuilder = new StringBuilder(200);
         sqlStringBuilder.append(getSQLtoRun(name, type, queryParams, isSelfServiceUserReport));
         final GenericResultsetData result;
         boolean isPaginationAllowed = Boolean.parseBoolean(queryParams.get(ReportingConstants.IS_PAGINATION_ALLOWED));
-
+        Page<GenericResultsetData> reportData = this.paginationHelper.fetchPage(this.jdbcTemplate, sqlStringBuilder.toString(), null,
+                new ReportMapper(sqlStringBuilder));
         if (isPaginationAllowed) {
-            result = retrieveGenericResultsetWithPagination(sqlStringBuilder, queryParams);
-        } else {
-            result = this.genericDataService.fillGenericResultSet(sqlStringBuilder.toString());
+            sqlStringBuilder = retrieveGenericResultsetWithPagination(sqlStringBuilder, queryParams);
         }
+        result = this.genericDataService.fillGenericResultSet(sqlStringBuilder.toString());
+        result.setTotalItems(reportData.getTotalFilteredRecords());
+        int pageSize = this.configurationDomainService.reportsPaginationNumberOfItemsPerPage();
+        result.setRecordsPerPage(pageSize);
 
         final long elapsed = System.currentTimeMillis() - startTime;
         LOG.info("FINISHING Report/Request Name: {} - {}     Elapsed Time: {}", name, type, elapsed);
         return result;
     }
 
-    public GenericResultsetData retrieveGenericResultsetWithPagination(final StringBuilder sqlStringBuilder,
+    public StringBuilder retrieveGenericResultsetWithPagination(final StringBuilder sqlStringBuilder,
             final Map<String, String> queryParams) {
-        final GenericResultsetData result;
+        retrieveGenericResultsetWithPaginationDataValidator(queryParams);
+        int pageSize = this.configurationDomainService.reportsPaginationNumberOfItemsPerPage();
+        int pageNo = Integer.parseInt(queryParams.get(ReportingConstants.PAGE_NO));
+
+        pageNo = pageNo * pageSize;
+        sqlStringBuilder.append(" order by ").append(queryParams.get(PAGINATION_ORDER_BY));
+        sqlStringBuilder.append(" ");
+        sqlStringBuilder.append(sqlGenerator.limit(pageSize, pageNo));
+        return sqlStringBuilder;
+    }
+
+    public void retrieveGenericResultsetWithPaginationDataValidator(final Map<String, String> queryParams) {
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
 
         final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors);
@@ -193,20 +206,6 @@ public class ReadReportingServiceImpl implements ReadReportingService {
 
         baseDataValidator.reset().parameter(PAGINATION_ORDER_BY).value(queryParams.get(PAGINATION_ORDER_BY)).ignoreIfNull()
                 .matchesRegularExpression(ORDER_BY_REGEX_PATTERN).throwValidationErrors();
-        int pageSize = this.configurationDomainService.reportsPaginationNumberOfItemsPerPage();
-
-        Page<GenericResultsetData> reportData = this.paginationHelper.fetchPage(this.jdbcTemplate, sqlStringBuilder.toString(), null,
-                new ReportMapper(sqlStringBuilder));
-        int pageNo = Integer.parseInt(queryParams.get(ReportingConstants.PAGE_NO));
-
-        pageNo = pageNo * pageSize;
-        sqlStringBuilder.append(" order by ").append(queryParams.get(PAGINATION_ORDER_BY));
-        sqlStringBuilder.append(" ");
-        sqlStringBuilder.append(sqlGenerator.limit(pageSize, pageNo));
-        result = this.genericDataService.fillGenericResultSet(sqlStringBuilder.toString());
-        result.setTotalItems(reportData.getTotalFilteredRecords());
-        result.setRecordsPerPage(pageSize);
-        return result;
     }
 
     private String getSQLtoRun(final String name, final String type, final Map<String, String> queryParams,

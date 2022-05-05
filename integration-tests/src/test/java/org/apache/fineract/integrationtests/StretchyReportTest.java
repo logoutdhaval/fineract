@@ -54,7 +54,7 @@ public class StretchyReportTest {
     }
 
     @Test
-    public void testReportPagination() {
+    public void testReportWithPagination() {
         this.stretchyReportHelper = new StretchyReportHelper(this.requestSpec, this.responseSpec);
 
         final ResponseSpecification errorResponse = new ResponseSpecBuilder().expectStatusCode(400).build();
@@ -69,29 +69,28 @@ public class StretchyReportTest {
         Assertions.assertNotNull(reportDataSize);
 
         boolean isPaginationAllowed = true;
-        if (isPaginationAllowed) {
-            int pageNo = 0;
-            int pageCount = 0;
-            int pageContent = Math.toIntExact(GlobalConfigurationHelper
-                    .getGlobalConfigurationByName(requestSpec, responseSpec, "reports-pagination-number-of-items-per-page").getValue());
-            pageCount = reportDataSize / pageContent;
-            if (reportDataSize % pageContent != 0) {
-                pageCount++;
-            }
-            int resultantReportWithLimitSize = 0;
-            while (pageCount > pageNo) {
-                LinkedHashMap reportDataSlice = this.stretchyReportHelper.getStretchyReportDetailWithPagination(this.requestSpec,
-                        this.responseSpec, "", isPaginationAllowed, pageNo);
-                ArrayList<String> data = (ArrayList<String>) reportDataSlice.get("data");
-                resultantReportWithLimitSize += data.size();
-                pageNo++;
-            }
-            assertEquals(resultantReportWithLimitSize, reportDataSize);
-
-            log.info("--------------------------Report with no pageNo--------------------------");
-            ArrayList<HashMap> error = (ArrayList<HashMap>) validationErrorHelper.getStretchyReportDetailWithPaginationWithoutPageNo(
-                    this.requestSpec, errorResponse, CommonConstants.RESPONSE_ERROR, isPaginationAllowed);
-            assertEquals("validation.msg.null.pageNo.cannot.be.blank", error.get(0).get(CommonConstants.RESPONSE_ERROR_MESSAGE_CODE));
+        int pageNo = 0;
+        int pageCount = 0;
+        int pageContent = Math.toIntExact(GlobalConfigurationHelper
+                .getGlobalConfigurationByName(requestSpec, responseSpec, "reports-pagination-number-of-items-per-page").getValue());
+        pageCount = reportDataSize / pageContent;
+        if (reportDataSize % pageContent != 0) {
+            pageCount++;
         }
+        int resultantReportWithLimitSize = 0;
+        while (pageCount > pageNo) {
+            LinkedHashMap reportDataSlice = this.stretchyReportHelper.getStretchyReportDetailWithPagination(this.requestSpec,
+                    this.responseSpec, "", isPaginationAllowed, pageNo);
+            ArrayList<String> data = (ArrayList<String>) reportDataSlice.get("data");
+            resultantReportWithLimitSize += data.size();
+            pageNo++;
+        }
+        assertEquals(resultantReportWithLimitSize, reportDataSize);
+
+        log.info("--------------------------Report with no pageNo--------------------------");
+        ArrayList<HashMap> error = (ArrayList<HashMap>) validationErrorHelper.getStretchyReportDetailWithPaginationWithoutPageNo(
+                this.requestSpec, errorResponse, CommonConstants.RESPONSE_ERROR, isPaginationAllowed);
+        assertEquals("validation.msg.null.pageNo.cannot.be.blank", error.get(0).get(CommonConstants.RESPONSE_ERROR_MESSAGE_CODE));
+
     }
 }
