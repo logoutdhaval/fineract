@@ -33,8 +33,6 @@ public final class GenericResultsetData {
 
     private final List<ResultsetColumnHeaderData> columnHeaders;
     private final List<ResultsetRowData> data;
-    private int totalItems;
-    private int recordsPerPage;
 
     public String getColTypeOfColumnNamed(final String columnName) {
 

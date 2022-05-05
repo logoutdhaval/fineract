@@ -21,7 +21,8 @@ package org.apache.fineract.infrastructure.dataqueries.service;
 @SuppressWarnings({ "HideUtilityClassConstructor" })
 public class ReportingConstants {
 
-    public static final String PAGE_NO = "pageNo";
+    public static final String OFFSET = "offset";
     public static final String IS_PAGINATION_ALLOWED = "isPaginationAllowed";
     public static final String PAGINATION_ORDER_BY = "paginationOrderBy";
+    public static final String REPORTS_PER_PAGE = "reportsPerPage";
 }

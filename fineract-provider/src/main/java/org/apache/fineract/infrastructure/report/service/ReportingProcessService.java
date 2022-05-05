@@ -19,8 +19,9 @@
 package org.apache.fineract.infrastructure.report.service;
 
 import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.IS_PAGINATION_ALLOWED;
-import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.PAGE_NO;
+import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.OFFSET;
 import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.PAGINATION_ORDER_BY;
+import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.REPORTS_PER_PAGE;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,7 +44,7 @@ public interface ReportingProcessService {
                 SQLInjectionValidator.validateSQLInput(pValue);
                 reportParams.put(pKey, pValue);
             }
-            if (k.equalsIgnoreCase(IS_PAGINATION_ALLOWED) || k.equalsIgnoreCase(PAGINATION_ORDER_BY) || k.equalsIgnoreCase(PAGE_NO)) {
+            if (k.equalsIgnoreCase(IS_PAGINATION_ALLOWED) || k.equalsIgnoreCase(PAGINATION_ORDER_BY) || k.equalsIgnoreCase(OFFSET)|| k.equalsIgnoreCase(REPORTS_PER_PAGE)) {
                 String pKey = k;
                 String pValue = queryParams.get(k).get(0);
                 reportParams.put(pKey, pValue);

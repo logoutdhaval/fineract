@@ -18,7 +18,7 @@
  */
 package org.apache.fineract.infrastructure.dataqueries.service;
 
-import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.PAGE_NO;
+import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.OFFSET;
 import static org.apache.fineract.infrastructure.dataqueries.service.ReportingConstants.PAGINATION_ORDER_BY;
 
 import com.lowagie.text.Document;
@@ -46,7 +46,6 @@ import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
-import org.apache.fineract.infrastructure.core.service.Page;
 import org.apache.fineract.infrastructure.core.service.PaginationHelper;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.dataqueries.data.GenericResultsetData;
@@ -170,16 +169,10 @@ public class ReadReportingServiceImpl implements ReadReportingService {
         sqlStringBuilder.append(getSQLtoRun(name, type, queryParams, isSelfServiceUserReport));
         final GenericResultsetData result;
         boolean isPaginationAllowed = Boolean.parseBoolean(queryParams.get(ReportingConstants.IS_PAGINATION_ALLOWED));
-        Page<GenericResultsetData> reportData = this.paginationHelper.fetchPage(this.jdbcTemplate, sqlStringBuilder.toString(), null,
-                new ReportMapper(sqlStringBuilder));
         if (isPaginationAllowed) {
             sqlStringBuilder = retrieveGenericResultsetWithPagination(sqlStringBuilder, queryParams);
         }
         result = this.genericDataService.fillGenericResultSet(sqlStringBuilder.toString());
-        result.setTotalItems(reportData.getTotalFilteredRecords());
-        int pageSize = this.configurationDomainService.reportsPaginationNumberOfItemsPerPage();
-        result.setRecordsPerPage(pageSize);
-
         final long elapsed = System.currentTimeMillis() - startTime;
         LOG.info("FINISHING Report/Request Name: {} - {}     Elapsed Time: {}", name, type, elapsed);
         return result;
@@ -188,13 +181,11 @@ public class ReadReportingServiceImpl implements ReadReportingService {
     public StringBuilder retrieveGenericResultsetWithPagination(final StringBuilder sqlStringBuilder,
             final Map<String, String> queryParams) {
         retrieveGenericResultsetWithPaginationDataValidator(queryParams);
-        int pageSize = this.configurationDomainService.reportsPaginationNumberOfItemsPerPage();
-        int pageNo = Integer.parseInt(queryParams.get(ReportingConstants.PAGE_NO));
-
-        pageNo = pageNo * pageSize;
+        int offset = Integer.parseInt(queryParams.get(ReportingConstants.OFFSET));
+        int pageSize = Integer.parseInt(queryParams.get(ReportingConstants.REPORTS_PER_PAGE));
         sqlStringBuilder.append(" order by ").append(queryParams.get(PAGINATION_ORDER_BY));
         sqlStringBuilder.append(" ");
-        sqlStringBuilder.append(sqlGenerator.limit(pageSize, pageNo));
+        sqlStringBuilder.append(sqlGenerator.limit(pageSize, offset));
         return sqlStringBuilder;
     }
 
@@ -202,7 +193,7 @@ public class ReadReportingServiceImpl implements ReadReportingService {
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
 
         final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors);
-        baseDataValidator.reset().parameter(PAGE_NO).value(queryParams.get(PAGE_NO)).notNull().throwValidationErrors();
+        baseDataValidator.reset().parameter(OFFSET).value(queryParams.get(OFFSET)).notNull().throwValidationErrors();
 
         baseDataValidator.reset().parameter(PAGINATION_ORDER_BY).value(queryParams.get(PAGINATION_ORDER_BY)).ignoreIfNull()
                 .matchesRegularExpression(ORDER_BY_REGEX_PATTERN).throwValidationErrors();
@@ -250,21 +241,6 @@ public class ReadReportingServiceImpl implements ReadReportingService {
             return rs.getString("the_sql");
         }
         throw new ReportNotFoundException(encodedName);
-    }
-
-    private static final class ReportMapper implements RowMapper<GenericResultsetData> {
-
-        private final StringBuilder schema;
-
-        ReportMapper(StringBuilder sql) {
-
-            this.schema = sql;
-        }
-
-        @Override
-        public GenericResultsetData mapRow(ResultSet rs, int rowNum) throws SQLException {
-            return null;
-        }
     }
 
     @Override

@@ -88,7 +88,7 @@ public class GenericDataServiceImpl implements GenericDataService {
                 resultsetDataRows.add(resultsetDataRow);
             }
 
-            return new GenericResultsetData(columnHeaders, resultsetDataRows, 0, 0);
+            return new GenericResultsetData(columnHeaders, resultsetDataRows);
         } catch (DataAccessException e) {
             throw new PlatformDataIntegrityException("error.msg.report.unknown.data.integrity.issue", e.getClass().getName(), e);
         }
