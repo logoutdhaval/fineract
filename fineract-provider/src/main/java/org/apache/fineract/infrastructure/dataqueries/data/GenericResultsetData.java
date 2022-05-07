@@ -19,27 +19,22 @@
 package org.apache.fineract.infrastructure.dataqueries.data;
 
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Immutable data object for generic resultset data.
  */
+@AllArgsConstructor
+@Getter
+@Setter
 public final class GenericResultsetData {
 
     private final List<ResultsetColumnHeaderData> columnHeaders;
     private final List<ResultsetRowData> data;
-
-    public GenericResultsetData(final List<ResultsetColumnHeaderData> columnHeaders, final List<ResultsetRowData> resultsetDataRows) {
-        this.columnHeaders = columnHeaders;
-        this.data = resultsetDataRows;
-    }
-
-    public List<ResultsetColumnHeaderData> getColumnHeaders() {
-        return this.columnHeaders;
-    }
-
-    public List<ResultsetRowData> getData() {
-        return this.data;
-    }
+    private int totalItems;
+    private int recordsPerPage;
 
     public String getColTypeOfColumnNamed(final String columnName) {
 
