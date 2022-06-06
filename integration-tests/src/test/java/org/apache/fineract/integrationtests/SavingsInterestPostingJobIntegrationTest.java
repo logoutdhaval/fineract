@@ -86,11 +86,11 @@ public class SavingsInterestPostingJobIntegrationTest {
         ArrayList<HashMap<String, Object>> transactions = (ArrayList<HashMap<String, Object>>) transactionObj;
         HashMap<String, Object> interestPostingTransaction = transactions.get(transactions.size() - 48);
         for (Map.Entry<String, Object> entry : interestPostingTransaction.entrySet()) {
+
             LOG.info("{} - {}", entry.getKey(), entry.getValue().toString());
         }
         assertEquals("10129.582", interestPostingTransaction.get("runningBalance").toString(), "Equality check for Balance");
     }
-
     @Test
     public void testSavingsDailyInterestPostingJob() {
         // client activation, savings activation and 1st transaction date
