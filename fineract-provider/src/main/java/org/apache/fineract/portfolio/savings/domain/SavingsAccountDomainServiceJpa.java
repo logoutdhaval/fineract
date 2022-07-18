@@ -134,7 +134,10 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
                 depositAccountOnHoldTransactions, backdatedTxnsAllowedTill);
 
         saveTransactionToGenerateTransactionId(withdrawal);
-
+        if (backdatedTxnsAllowedTill) {
+            // Update transactions separately
+            saveUpdatedTransactionsOfSavingsAccount(account.getSavingsAccountTransactionsWithPivotConfig());
+        }
         this.savingsAccountRepository.save(account);
 
         postJournalEntries(account, existingTransactionIds, existingReversedTransactionIds, transactionBooleanValues.isAccountTransfer(),
