@@ -361,6 +361,11 @@ public class LoanTransactionHelper {
                 getRepaymentBodyAsJSON(date, amountToBePaid), "");
     }
 
+    public HashMap makeRepaymentWithAccountNo(final String date, final Float amountToBePaid, final String accountNo) {
+        return (HashMap) performLoanTransaction(createInteroperationLoanTransactionURL(accountNo),
+                getRepaymentBodyAsJSON(date, amountToBePaid), "");
+    }
+
     public HashMap reverseRepayment(final Integer loanId, final Integer transactionId, String date) {
         return (HashMap) performLoanTransaction(createLoanTransactionURL(UNDO, loanId, transactionId), getUndoJsonBody(date), "");
     }
@@ -720,6 +725,10 @@ public class LoanTransactionHelper {
 
     private String createLoanTransactionURL(final String command, final Integer loanID) {
         return "/fineract-provider/api/v1/loans/" + loanID + "/transactions?command=" + command + "&" + Utils.TENANT_IDENTIFIER;
+    }
+
+    private String createInteroperationLoanTransactionURL(final String accountNo) {
+        return "/fineract-provider/api/v1/interoperation/transactions/" + accountNo + "/loanrepayment";
     }
 
     private String createLoanTransactionURL(final String command, final Integer loanID, final Integer transactionId) {
